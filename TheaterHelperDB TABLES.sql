@@ -14,13 +14,13 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
-USE `mydb` ;
+CREATE SCHEMA IF NOT EXISTS `theater` DEFAULT CHARACTER SET utf8 ;
+USE `theater` ;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`movie`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`movie` (
+CREATE TABLE IF NOT EXISTS `theater`.`movie` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(45) NOT NULL,
   `studio` VARCHAR(45) NOT NULL,
@@ -36,7 +36,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`customer`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`customer` (
+CREATE TABLE IF NOT EXISTS `theater`.`customer` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(45) NOT NULL,
   `phone_number` VARCHAR(45) NOT NULL,
@@ -52,7 +52,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`showing`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`showing` (
+CREATE TABLE IF NOT EXISTS `theater`.`showing` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `movie` INT NULL,
   `room_number` VARCHAR(45) NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`showing` (
   INDEX `movie_idx` (`movie` ASC) VISIBLE,
   CONSTRAINT `showing_movie`
     FOREIGN KEY (`movie`)
-    REFERENCES `mydb`.`movie` (`id`)
+    REFERENCES `theater`.`movie` (`id`)
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
@@ -72,7 +72,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`ticket`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`ticket` (
+CREATE TABLE IF NOT EXISTS `theater`.`ticket` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `customer` INT NOT NULL,
   `movie` INT NULL,
@@ -86,17 +86,17 @@ CREATE TABLE IF NOT EXISTS `mydb`.`ticket` (
   INDEX `show_id_idx` (`show_id` ASC) VISIBLE,
   CONSTRAINT `ticket_movie`
     FOREIGN KEY (`movie`)
-    REFERENCES `mydb`.`movie` (`id`)
+    REFERENCES `theater`.`movie` (`id`)
     ON DELETE SET NULL
     ON UPDATE CASCADE,
   CONSTRAINT `ticket_customer`
     FOREIGN KEY (`customer`)
-    REFERENCES `mydb`.`customer` (`id`)
+    REFERENCES `theater`.`customer` (`id`)
     ON DELETE RESTRICT
     ON UPDATE CASCADE,
   CONSTRAINT `ticket_show_id`
     FOREIGN KEY (`show_id`)
-    REFERENCES `mydb`.`showing` (`id`)
+    REFERENCES `theater`.`showing` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
