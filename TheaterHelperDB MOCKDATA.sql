@@ -167,14 +167,3 @@ INSERT INTO ticket (id, customer, movie, show_id, price, date_entered) VALUES
 
 (59, 19, 20, 29, 13.50, '2026-04-05 13:17:00'),
 (60, 20, 20, 30, 14.00, '2026-04-05 13:18:00');
-
--- Testing 
-DELETE FROM ticket;
-DELETE FROM showing;
-DELETE FROM customer;
-DELETE FROM movie;
-
-DROP TABLE ticket;
-DROP TABLE showing;
-DROP TABLE customer;
-DROP TABLE movie;
