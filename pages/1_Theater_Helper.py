@@ -104,44 +104,16 @@ st.markdown(
 st.markdown("# Grand Marquee Cinemas")
 st.caption("Your showtimes, films, and ticket desk — powered by the same data as `TheaterHelperDB.sql`.")
 
-movies_df = db.get_query("SELECT * FROM movie")
-schedule_df = db.get_query("SELECT * FROM showing")
-tickets_df = db.get_query("SELECT * FROM ticket")
-
-
-@st.cache_data
-def ticket_sales_by_movie() -> pd.DataFrame:
-    # Fetch live ticket and movie data from DB
-    t = db.get_query("SELECT id AS ticket_id, movie, price FROM ticket").rename(columns={"id": "ticket_id"})
-    m = db.get_query("SELECT id AS movie_id, title FROM movie")
-    merged = t.merge(m, left_on="movie", right_on="movie_id")
-    g = merged.groupby("title", as_index=False).agg(
-        sold=("ticket_id", "count"),
-        revenue=("price", "sum"),
-    )
-    return g.sort_values("sold", ascending=False)
-
-@st.cache_data
-def revenue_by_genre() -> pd.DataFrame:
-    # Fetch live ticket and movie data from DB
-    t = db.get_query("SELECT id AS ticket_id, movie, price FROM ticket")
-    m = db.get_query("SELECT id AS movie_id, genre FROM movie")
-    merged = t.merge(m, left_on="movie", right_on="movie_id")
-    return merged.groupby("genre", as_index=False).agg(
-        revenue=("price", "sum"),
-        tickets=("ticket_id", "count"),
-    )
-
 
 with st.sidebar:
     st.markdown("### Concessions & filters")
     st.markdown("---")
-    date_opts = ["All dates"] + sorted(schedule_df["date"].unique().tolist())
+    date_opts = ["All dates"] + sorted(db.get_showing_dates()["date"].tolist())
     pick_date = st.selectbox("Showtime date", date_opts)
     genre_filter = st.multiselect(
         "Genres on screen",
-        options=sorted(movies_df["genre"].unique()),
-        default=sorted(movies_df["genre"].unique()),
+        options=sorted(db.get_all_genres()["genre"].tolist()),
+        default=None,
     )
     st.markdown("---")
     st.markdown(
@@ -149,7 +121,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-filt_schedule = schedule_df[schedule_df["genre"].isin(genre_filter)]
+filt_schedule = db.get_showing_dates()
 if pick_date != "All dates":
     filt_schedule = filt_schedule[filt_schedule["date"] == pick_date]
 
@@ -162,28 +134,19 @@ tab_show, tab_films, tab_box, tab_sql = st.tabs(
 with tab_show:
     st.subheader("This week's screenings")
     st.markdown('<div class="screen-glow"></div>', unsafe_allow_html=True)
-    disp = filt_schedule.copy()
-    disp["time"] = disp["time"].astype(str).str.slice(0, 5)
     st.dataframe(
-        disp,
+        db.get_query(
+            "Select id, movie, room_number as 'room number', date, time from showing"
+            ),
         use_container_width=True,
         hide_index=True,
-        column_config={
-            "showing_id": st.column_config.NumberColumn("ID", width="small"),
-            "title": st.column_config.TextColumn("Feature", width="medium"),
-            "genre": st.column_config.TextColumn("Genre"),
-            "age_rating": st.column_config.TextColumn("Rated"),
-            "runtime": st.column_config.TextColumn("Runtime"),
-            "studio": st.column_config.TextColumn("Studio", width="medium"),
-            "room_number": st.column_config.TextColumn("Auditorium"),
-            "date": st.column_config.TextColumn("Date"),
-            "time": st.column_config.TextColumn("Start"),
-        },
     )
 
 with tab_films:
     st.subheader("Lobby poster wall")
-    mview = movies_df[movies_df["genre"].isin(genre_filter)].reset_index(drop=True)
+    #mview = movies_df[movies_df["genre"].isin(genre_filter)].reset_index(drop=True)
+    #TODO - add filtering to queries in theater_helper.py
+    mview = db.get_query("SELECT id, title, studio, genre, age_rating, runtime FROM movie")
     for start in range(0, len(mview), 4):
         chunk = mview.iloc[start : start + 4]
         cols = st.columns(4)
@@ -203,8 +166,8 @@ with tab_films:
 with tab_box:
     st.subheader("Ticket sales from your dataset")
     col1, col2 = st.columns(2)
-    sales = ticket_sales_by_movie()
-    genre_rev = revenue_by_genre()
+    sales = db.ticket_sales_by_movie()
+    genre_rev = db.revenue_by_genre()
 
     fig_bar = px.bar(
         sales,

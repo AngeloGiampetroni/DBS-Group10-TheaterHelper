@@ -1,6 +1,8 @@
 from datetime import datetime
 from database.theater_database import Movie, Customer, Showing, Ticket
 from sqlalchemy.orm import joinedload
+import streamlit as st
+import pandas as pd
 
 class TheaterDBHelper:
     def __init__(self, connection):
@@ -156,3 +158,47 @@ class TheaterDBHelper:
         PLEASE DONT USE THIS FOR ANYTHING OTHER THAN SELECT QUERIES
         """
         return self.connection.query(query, ttl=600)
+      
+
+    def ticket_sales_by_movie(self) -> pd.DataFrame:
+        """
+        Fetch live ticket sales data from the database, grouped by movie title.
+
+        :return: DataFrame with columns: movie.id, sum of price, and title (joined from movie table)
+        """
+        return self.get_query("select movie, sum(price) from ticket group by movie;")
+
+
+    def revenue_by_genre(self) -> pd.DataFrame:
+        """
+        Fetch live ticket sales data from the database, grouped by genre.
+
+        :return: DataFrame with columns: genre and sum of price
+        """
+        return self.get_query("select genre, sum(price) as revenue from ticket join movie on ticket.movie = movie.id group by genre;")
+
+    def get_all_genres(self) -> pd.DataFrame:
+        """
+        Fetch all unique genres from the movie table.
+
+        :return: DataFrame with a single column 'genre' containing unique genres
+        """
+        return self.get_query("select distinct genre from movie;")
+    
+    def get_all_agerating(self) -> pd.DataFrame:
+        """
+        Fetch all unique age ratings from the movie table.
+
+        :return: DataFrame with a single column 'age_rating' containing unique age ratings
+        """
+        return self.get_query("select distinct age_rating from movie;")
+    
+    def get_showing_dates(self) -> pd.DataFrame:
+        """
+        Fetch all unique show dates from the showing table.
+
+        :return: DataFrame with a single column 'date' containing unique show dates
+        """
+        return self.get_query("select distinct date from showing;")
+
+
