@@ -150,7 +150,7 @@ class TheaterDBHelper:
                 ticket.price = price
                 
             session.commit()
-            return True
+            return True 
 
     def get_query(self, query):
         """
@@ -158,7 +158,55 @@ class TheaterDBHelper:
         PLEASE DONT USE THIS FOR ANYTHING OTHER THAN SELECT QUERIES
         """
         return self.connection.query(query, ttl=600)
-      
+    
+    def get_movies_with_filters(self, genre=None, age_rating=None):
+        """
+        Fetch movies from the database with optional filters for genre and age rating.
+
+        :param genre: Optional genre filter (string)
+        :param age_rating: Optional age rating filter (string)
+        :return: DataFrame with columns: id, title, studio, genre, age_rating, runtime
+        """
+        with self.connection.session as session:
+            query = session.query(Movie)
+            
+            if genre:
+                query = query.filter(Movie.genre == genre)
+                
+            if age_rating:
+                query = query.filter(Movie.age_rating == age_rating)
+                
+            result = query.all()
+            return pd.DataFrame([{
+                "id": movie.id,
+                "title": movie.title,
+                "studio": movie.studio,
+                "genre": movie.genre,
+                "age_rating": movie.age_rating,
+                "runtime": movie.runtime
+            } for movie in result]) 
+        
+    def get_tickets_with_filters(self, genre=None):
+        """
+        Fetch tickets from the database with optional filter for genre.
+
+        :param genre: Optional genre filter (string)
+        :return: DataFrame with columns: ticket_id, customer_name, title, genre, price
+        """
+        with self.connection.session as session:
+            query = session.query(Ticket).join(Movie, Ticket.movie == Movie.id)
+            
+            if genre:
+                query = query.filter(Movie.genre == genre)
+                
+            result = query.options(joinedload(Ticket.customer_ref)).all()
+            return pd.DataFrame([{
+                "ticket_id": ticket.id,
+                "customer_name": f"{ticket.customer_ref.first_name} {ticket.customer_ref.last_name}",
+                "title": ticket.movie_ref.title,
+                "genre": ticket.movie_ref.genre,
+                "price": ticket.price
+            } for ticket in result])
 
     def ticket_sales_by_movie(self) -> pd.DataFrame:
         """

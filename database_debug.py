@@ -1,5 +1,5 @@
 import streamlit as st
-from database.theater_helper import TheaterDBHelper
+from database.database_helper import TheaterDBHelper
 
 # Connect to the database
 conn = st.connection("mysql", type="sql")
