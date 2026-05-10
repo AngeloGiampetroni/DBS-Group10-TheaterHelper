@@ -97,12 +97,10 @@ with tab_films:
 with tab_box:
     st.subheader("Ticket sales from your dataset")
     col1, col2 = st.columns(2)
-    sales = db.ticket_sales_by_movie()
-    genre_rev = db.revenue_by_genre()
+    sales = db.get_tickets_with_filters(genre=genre_filter if genre_filter else None)
 
     st.dataframe(
-        #tickets_df[tickets_df["genre"].isin(genre_filter)],
-        db.get_tickets_with_filters(genre=genre_filter if genre_filter else None),
+        sales,
         use_container_width=True,
         hide_index=True,
         column_config={

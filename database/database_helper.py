@@ -212,18 +212,17 @@ class TheaterDBHelper:
         """
         Fetch live ticket sales data from the database, grouped by movie title.
 
-        :return: DataFrame with columns: movie.id, sum of price, and title (joined from movie table)
+        :return: dataframe with columns: title, tickets_sold, revenue
         """
-        return self.get_query("select movie, sum(price) from ticket group by movie;")
-
-
-    def revenue_by_genre(self) -> pd.DataFrame:
+        return self.get_query("select title, count(*) as tickets_sold, sum(price) as revenue from ticket join movie on ticket.movie = movie.id group by title;")
+    
+    def ticket_sales_by_genre(self) -> pd.DataFrame:
         """
         Fetch live ticket sales data from the database, grouped by genre.
 
-        :return: DataFrame with columns: genre and sum of price
+        :return: DataFrame with columns: genre, tickets_sold, revenue
         """
-        return self.get_query("select genre, sum(price) as revenue from ticket join movie on ticket.movie = movie.id group by genre;")
+        return self.get_query("select genre, count(*) as tickets_sold, sum(price) as revenue from ticket join movie on ticket.movie = movie.id group by genre;")
 
     def get_all_genres(self) -> pd.DataFrame:
         """
@@ -248,5 +247,16 @@ class TheaterDBHelper:
         :return: DataFrame with a single column 'date' containing unique show dates
         """
         return self.get_query("select distinct date from showing;")
+    
+    def get_customer_by_id(self, customer_id) -> Customer:
+        """Retrieve customer data from database by ID"""
+        try:
+            with self.connection.session as session:
+                from database.theater_database import Customer
+                customer = session.query(Customer).filter(Customer.id == customer_id).first()
+                return customer
+        except Exception as e:
+            st.error(f"Error fetching customer: {e}")
+            return None
 
 
