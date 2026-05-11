@@ -258,5 +258,20 @@ class TheaterDBHelper:
         except Exception as e:
             st.error(f"Error fetching customer: {e}")
             return None
-
-
+    
+    def get_all_tickets_by_customer(self, customer_id) -> pd.DataFrame:
+        """Retrive all tickets for a customer"""
+        with self.connection.session as session:
+            query = session.query(Ticket).join(Movie, Ticket.movie == Movie.id).join(Showing, Ticket.show_id == Showing.id)
+            query = query.filter(Ticket.customer == customer_id)
+                
+            result = query.options(joinedload(Ticket.customer_ref)).all()
+            return pd.DataFrame([{
+                "ticket_id": ticket.id,
+                "title": ticket.movie_ref.title,
+                "date": ticket.showing_ref.date,
+                "time": ticket.showing_ref.time.strftime('%I:%M %p'),
+                "genre": ticket.movie_ref.genre,
+                "price": ticket.price
+            } for ticket in result])
+        

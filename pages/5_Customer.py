@@ -73,6 +73,7 @@ def display_dashboard():
         st.markdown(f"Age: {customer.age}")
         st.markdown(f"Member since {customer.date_entered}")
         #TODO add data the customer should look at
+        display_content(customer=customer)
 
         
     else:
@@ -80,6 +81,15 @@ def display_dashboard():
         if st.button("Back to Login"):
             logout()
 
+def display_content(customer):
+    tab_list_tickets, tab_current_movies = st.tabs(["My Tickets", "Current Movies"])
+    with tab_list_tickets:
+        st.subheader("My Tickets")
+        st.dataframe(
+            db.get_all_tickets_by_customer(customer.id),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 # Main app logic
 if st.session_state.customer_data is not None:
