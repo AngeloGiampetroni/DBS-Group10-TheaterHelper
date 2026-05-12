@@ -252,6 +252,38 @@ class TheaterDBHelper:
             st.error(f"Failed to delete tickets for movie: {e}")
             return -1
 
+    def remove_all_showings_for_movie(self, movie_id) -> dict:
+        """
+        Deletes all showings for a specific movie.
+        Wipes tickets for those showings first, then removes the showings.
+
+        :return: Dictionary with counts: {'showings_removed': int, 'tickets_removed': int}
+                 Returns None if an error occurred.
+        """
+        try:
+            with self.connection.session as session:
+                # Step 1: Wipe all tickets tied to any showing of this movie
+                # .in_() performs one fast bulk delete instead of looping
+                tickets_removed = session.query(Ticket).filter(
+                    Ticket.show_id.in_(
+                        session.query(Showing.id).filter(Showing.movie == movie_id)
+                    )
+                ).delete(synchronize_session=False)
+                
+                # Step 2: Delete the showings themselves
+                showings_removed = session.query(Showing).filter(
+                    Showing.movie == movie_id
+                ).delete()
+                
+                session.commit()
+                return {
+                    "showings_removed": showings_removed,
+                    "tickets_removed": tickets_removed
+                }
+        except Exception as e:
+            st.error(f"Failed to remove showings for movie: {e}")
+            return None
+
     def get_query(self, query):
         """
         ONLY FOR SELECT QUERIES\n
