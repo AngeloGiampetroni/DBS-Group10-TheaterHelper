@@ -60,24 +60,30 @@ def logout():
 def book_ticket_dialog(customer):
     st.write(f"Booking for: **{customer.first_name} {customer.last_name}**")
     
-    # Fetch available showings
-    showings = db.get_query("SELECT * FROM theater.showing;")
-
+    # Fetch available showings with movie titles
+    showings = db.get_query("""
+        SELECT 
+            s.id,
+            s.movie AS movie_id,
+            m.title AS movie,
+            s.room_number,
+            s.date,
+            s.time
+        FROM theater.showing s
+        JOIN theater.movie m ON s.movie = m.id
+    """)
     
     if showings.empty:
         st.error("No showings available at this time.")
         return
 
-    # Create a list of options for the dropdown
-    # Formats the list so users see: "Movie Title | Room 4 | 19:00:00"
     options = {
         f"{row['movie']} | Room {row['room_number']} | {row['date']} at {row['time']}": {
             "showing_id": row["id"],
-            "movie_id": row["movie"],
+            "movie_id": row["movie_id"],
         }
         for _, row in showings.iterrows()
     }
-    
     
     selected_label = st.selectbox("Choose a Showing", options)
     selected_data = options[selected_label]
@@ -94,8 +100,36 @@ def book_ticket_dialog(customer):
         
         if success:
             st.success("Ticket purchased!")
-            print("Ticket purchased!")
-            st.rerun() # Refresh to show the new ticket in the table
+            st.rerun()
+
+@st.dialog("Cancel a Ticket")
+def cancel_ticket_dialog(customer):
+    st.write("Select a ticket to cancel and refund.")
+    tickets_df = db.get_all_tickets_by_customer(customer.id)
+    
+    if tickets_df.empty:
+        st.info("You do not have any tickets to cancel.")
+        return
+
+    options = {
+        f"{row['title']} | {row['date']} at {row['time']}": row['ticket_id']
+        for _, row in tickets_df.iterrows()
+    }
+    
+    selected_label = st.selectbox("Choose ticket to cancel", options.keys())
+    ticket_id_to_cancel = options[selected_label]
+    
+    st.warning("Are you sure? This action cannot be undone.")
+
+    if st.button("Confirm Cancellation", use_container_width=True):
+        success = db.remove_ticket(ticket_id_to_cancel)
+        
+        if success:
+            st.success("Ticket successfully canceled!")
+            st.rerun() # Refresh the page to update the table
+        else:
+            st.error("Failed to cancel ticket.")
+
 
 def display_dashboard():
     
@@ -150,6 +184,9 @@ def display_content(customer):
         with col_2:
             if st.button("Book A Ticket", use_container_width=True):
                 book_ticket_dialog(customer)
+            if st.button("Cancel A Ticket", use_container_width=True):
+                cancel_ticket_dialog(customer)
+
     with tab_current_movies:
         st.subheader("Current Movies")
         st.subheader("Lobby poster wall")

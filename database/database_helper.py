@@ -150,7 +150,139 @@ class TheaterDBHelper:
                 ticket.price = price
                 
             session.commit()
-            return True 
+            return True
+    
+    def remove_ticket(self, ticket_id) -> bool:
+        """Deletes a ticket by its ID."""
+        try:
+            with self.connection.session as session:
+                ticket = session.query(Ticket).filter(Ticket.id == ticket_id).first()
+                if not ticket:
+                    return False # Ticket doesn't exist
+                
+                session.delete(ticket)
+                session.commit()
+                return True
+        except Exception as e:
+            st.error(f"Failed to delete ticket: {e}")
+            return False
+
+    def remove_customer(self, customer_id) -> bool:
+        """
+        Deletes a customer. 
+        ### Will fail if the customer has existing tickets due to RESTRICT constraints.
+        """
+        try:
+            with self.connection.session as session:
+                customer = session.query(Customer).filter(Customer.id == customer_id).first()
+                if not customer:
+                    return False
+                
+                session.delete(customer)
+                session.commit()
+                return True
+        except Exception as e:
+            st.error(f"Cannot delete customer. They may have active tickets. Error: {e}")
+            return False
+
+    def remove_showing(self, show_id) -> bool:
+        """
+        Deletes a showing.
+        ### Will fail if tickets are already booked for this show.
+        """
+        try:
+            with self.connection.session as session:
+                showing = session.query(Showing).filter(Showing.id == show_id).first()
+                if not showing:
+                    return False
+                
+                session.delete(showing)
+                session.commit()
+                return True
+        except Exception as e:
+            st.error(f"Cannot delete showing. Tickets may be tied to it. Error: {e}")
+            return False
+
+    def remove_movie(self, movie_id) -> bool:
+        """
+        Deletes a movie. 
+        # this will wipe the movie from existing tickets/showings but won't delete the tickets themselves.
+        """
+        try:
+            with self.connection.session as session:
+                movie = session.query(Movie).filter(Movie.id == movie_id).first()
+                if not movie:
+                    return False
+                
+                session.delete(movie)
+                session.commit()
+                return True
+        except Exception as e:
+            st.error(f"Failed to delete movie: {e}")
+            return False
+        
+    def remove_all_tickets_for_showing(self, show_id) -> int:
+        """
+        Deletes all tickets associated with a specific showing.
+        
+        :return: Returns the number of tickets deleted, or -1 if an error occurred.
+        """
+        try:
+            with self.connection.session as session:
+                # .delete() performs a bulk delete on all matching rows
+                deleted_count = session.query(Ticket).filter(Ticket.show_id == show_id).delete()
+                session.commit()
+                return deleted_count
+        except Exception as e:
+            st.error(f"Failed to delete tickets for showing: {e}")
+            return -1
+
+    def remove_all_tickets_for_movie(self, movie_id) -> int:
+        """
+        Deletes all tickets associated with a specific movie across ALL showings.
+
+        :return: Returns the number of tickets deleted, or -1 if an error occurred.
+        """
+        try:
+            with self.connection.session as session:
+                deleted_count = session.query(Ticket).filter(Ticket.movie == movie_id).delete()
+                session.commit()
+                return deleted_count
+        except Exception as e:
+            st.error(f"Failed to delete tickets for movie: {e}")
+            return -1
+
+    def remove_all_showings_for_movie(self, movie_id) -> dict:
+        """
+        Deletes all showings for a specific movie.
+        Wipes tickets for those showings first, then removes the showings.
+
+        :return: Dictionary with counts: {'showings_removed': int, 'tickets_removed': int}
+                 Returns None if an error occurred.
+        """
+        try:
+            with self.connection.session as session:
+                # Step 1: Wipe all tickets tied to any showing of this movie
+                # .in_() performs one fast bulk delete instead of looping
+                tickets_removed = session.query(Ticket).filter(
+                    Ticket.show_id.in_(
+                        session.query(Showing.id).filter(Showing.movie == movie_id)
+                    )
+                ).delete(synchronize_session=False)
+                
+                # Step 2: Delete the showings themselves
+                showings_removed = session.query(Showing).filter(
+                    Showing.movie == movie_id
+                ).delete()
+                
+                session.commit()
+                return {
+                    "showings_removed": showings_removed,
+                    "tickets_removed": tickets_removed
+                }
+        except Exception as e:
+            st.error(f"Failed to remove showings for movie: {e}")
+            return None
 
     def get_query(self, query):
         """
